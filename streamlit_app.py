@@ -24,33 +24,16 @@ uploaded_files = st.file_uploader("Upload PDF files", type="pdf", accept_multipl
 
 if st.button("Load and Process"):
     if uploaded_files:
-        for uploaded_file in uploaded_files:
-            try:
-                # Use a file-like object (BytesIO) for PyPDFLoader
-                pdf_file = BytesIO(uploaded_file.read())  # Convert to BytesIO
-                loader = PyPDFLoader(pdf_file)  # Pass as file-like object
-                docs = loader.load()
-
-                # Debugging: Check the structure of the loaded documents
-                if isinstance(docs, list):
-                    for doc in docs:
-                        if hasattr(doc, "page_content"):
-                            doc.metadata["source"] = uploaded_file.name
-                        else:
-                            st.write(f"Document does not have 'page_content': {doc}")
-                else:
-                    st.write("Loaded content is not a list of documents.")
-
-                loaded_docs.extend(docs)
-            except Exception as e:
-                st.write(f"Error loading {uploaded_file.name}: {e}")
-    else:
-        st.write("Please upload at least one PDF file.")
-
-    st.write(f"Loaded documents: {len(loaded_docs)}")
+    for uploaded_file in uploaded_files:
+        # Save each file temporarily in the created directory
+        file_path = os.path.join("uploaded_files", uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())
+        loader = PyPDFDirectoryLoader("uploaded_files")
+        docs = st.session_state.loader.load()
 
     # Store loaded documents in session state
-    st.session_state.loaded_docs = loaded_docs
+    st.session_state.docs = docs
 
 # LLM and Embedding initialization
 llm = ChatGroq(
@@ -78,14 +61,14 @@ prompt = ChatPromptTemplate.from_template(
 )
 
 # Text Splitting
-if st.session_state.loaded_docs:
+if st.session_state.docs:
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=100,
         length_function=len,
     )
 
-    document_chunks = text_splitter.split_documents(st.session_state.loaded_docs)
+    document_chunks = text_splitter.split_documents(st.session_state.docs)
     st.write(f"Number of chunks: {len(document_chunks)}")
 
     # Stuff Document Chain Creation
@@ -98,9 +81,9 @@ if st.session_state.loaded_docs:
 query = st.text_input("Enter your query:")
 if st.button("Get Answer"):
     if query:
-        if st.session_state.loaded_docs:
+        if st.session_state.docs:
             # Directly pass the documents to the chain without using a retriever
-            context = "\n".join([doc["page_content"] for doc in st.session_state.loaded_docs if isinstance(doc, dict)])
+            context = "\n".join([doc["page_content"] for doc in st.session_state.docs if isinstance(doc, dict)])
             response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
             # Check the structure of the response
