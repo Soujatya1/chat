@@ -29,35 +29,29 @@ uploaded_files = st.file_uploader("Upload PDF files", type="pdf", accept_multipl
 
 # Process PDFs automatically when uploaded
 if uploaded_files:
-    for uploaded_file in uploaded_files:
-        try:
-            # Save each file temporarily in the created directory
-            file_path = os.path.join(uploaded_files_directory, uploaded_file.name)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-
-            st.success(f"File '{uploaded_file.name}' uploaded successfully!")
-
-        except Exception as e:
-            st.write(f"Error uploading '{uploaded_file.name}': {e}")
-
-    # Use PyPDFDirectoryLoader to load documents
     loader = PyPDFDirectoryLoader(uploaded_files_directory)
     docs = loader.load()
-
+    
+    # Debugging: Ensure that docs are loaded correctly
     st.write(f"Loaded {len(docs)} documents.")
+    if len(docs) > 0:
+        st.write(f"Content of the first document: {docs[0]['content']}")
+    
+    # Splitting the documents into chunks
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=100,
+        length_function=len,
+    )
+    document_chunks = text_splitter.split_documents(docs)
+    st.write(f"Number of chunks: {len(document_chunks)}")
 
-    # Optional: Display content of the first document
-    #st.write(f"Content of the first document: {docs[0]['content']}")
-
-    # LLM and Embedding initialization
+    # Create the stuff documents chain
     llm = ChatGroq(
         groq_api_key="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",
         model_name='llama-3.3-70b-versatile',
         temperature=0
     )
-
-    # Craft ChatPrompt Template
     prompt = ChatPromptTemplate.from_template(
         """
         You are a specialist who needs to answer queries based on the information provided in the uploaded documents only. 
@@ -75,20 +69,7 @@ if uploaded_files:
         Question: {input}"""
     )
 
-    # Text Splitting
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=100,
-        length_function=len,
-    )
-
-    document_chunks = text_splitter.split_documents(docs)
-    st.write(f"Number of chunks: {len(document_chunks)}")
-
-    # Stuff Document Chain Creation
     document_chain = create_stuff_documents_chain(llm, prompt)
-
-    # Save document chain to session state
     st.session_state.retrieval_chain = document_chain
 
 # Query and Response
@@ -96,8 +77,11 @@ query = st.text_input("Enter your query:")
 if st.button("Get Answer"):
     if query:
         if uploaded_files:
-            # Directly pass the documents to the chain without using a retriever
+            # Make sure that context is correctly populated
             context = "\n".join([doc["content"] for doc in docs if isinstance(doc, dict)])
+            st.write(f"Context being passed: {context[:500]}...")  # Debugging context
+
+            # Invoke the chain with the context and query
             response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
             # Check the structure of the response
