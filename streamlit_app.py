@@ -27,11 +27,9 @@ if st.button("Load and Process PDF"):
 
     if uploaded_file is not None:
         try:
-            # Make sure to reset the position of the file pointer for PyPDF2 to process the file correctly
-            uploaded_file.seek(0)  # This ensures we start reading from the beginning of the file
-            
-            # Read the uploaded file using PyPDF2
-            pdf_reader = PyPDF2.PdfReader(uploaded_file)
+            # Read the uploaded file content and convert it into a BytesIO stream
+            file_bytes = uploaded_file.read()
+            pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
             total_pages = len(pdf_reader.pages)
 
             all_text = []
@@ -68,7 +66,6 @@ if st.button("Load and Process PDF"):
             st.write(f"Error processing PDF: {e}")
     else:
         st.write("Please upload a PDF file before processing.")
-
 
 # LLM and Embedding initialization
 llm = ChatGroq(
