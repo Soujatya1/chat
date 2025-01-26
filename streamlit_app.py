@@ -32,8 +32,6 @@ if st.button("Load and Process"):
             loader = PyPDFDirectoryLoader("uploaded_files")
             docs = st.session_state.loader.load()
 
-    # Store loaded documents in session state
-        st.session_state.docs = docs
 
 # LLM and Embedding initialization
 llm = ChatGroq(
@@ -61,14 +59,14 @@ prompt = ChatPromptTemplate.from_template(
 )
 
 # Text Splitting
-if st.session_state.docs:
+if docs:
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=100,
         length_function=len,
     )
 
-    document_chunks = text_splitter.split_documents(st.session_state.docs)
+    document_chunks = text_splitter.split_documents(docs)
     st.write(f"Number of chunks: {len(document_chunks)}")
 
     # Stuff Document Chain Creation
@@ -81,9 +79,9 @@ if st.session_state.docs:
 query = st.text_input("Enter your query:")
 if st.button("Get Answer"):
     if query:
-        if st.session_state.docs:
+        if docs:
             # Directly pass the documents to the chain without using a retriever
-            context = "\n".join([doc["page_content"] for doc in st.session_state.docs if isinstance(doc, dict)])
+            context = "\n".join([doc["page_content"] for doc in docs if isinstance(doc, dict)])
             response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
             # Check the structure of the response
