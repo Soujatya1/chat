@@ -88,16 +88,23 @@ query = st.text_input("Enter your query:")
 # Process query and get answer
 if st.button("Get Answer"):
     if query:
-        # Prepare context by joining all the document contents
-        context = "\n".join([f"Document {i + 1}: Source: {doc.metadata.get('source', 'Unknown')}\n{doc.metadata.get('title', 'No Title')}" for i, doc in enumerate(st.session_state.loaded_docs)])
+        # Use the FAISS vector store to retrieve relevant documents based on the query
+        retriever = st.session_state.vectors.as_retriever(search_type="similarity", k=2)  # Retrieve top 2 relevant documents
+        docs = retriever.get_relevant_documents(query)  # Perform similarity search with the query
+        
+        # If relevant documents are retrieved, prepare the context
+        if docs:
+            context = "\n".join([f"Document {i + 1}: Source: {doc.metadata.get('source', 'Unknown')}\n{doc.metadata.get('title', 'No Title')}\n{doc.page_content}" for i, doc in enumerate(docs)])
 
-        # Use retrieval_chain to get the response
-        response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
+            # Use retrieval_chain to get the response
+            response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
-        # Check if the response has an 'answer' key and display it
-        if isinstance(response, dict) and 'answer' in response:
-            st.write("Answer: ", response['answer'])
+            # Check if the response has an 'answer' key and display it
+            if isinstance(response, dict) and 'answer' in response:
+                st.write("Answer: ", response['answer'])
+            else:
+                st.write("Could not retrieve answer.")
         else:
-            st.write("Could not retrieve answer.")
+            st.write("No relevant documents found.")
     else:
         st.write("Please enter a query to get the answer.")
