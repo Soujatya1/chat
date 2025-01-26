@@ -8,10 +8,9 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 import os
-from langchain.schema import Document
 
 # Streamlit UI
-st.title("Document Intelligence")
+st.title("PDF Document Intelligence")
 
 # Initialize session state variables
 if "loaded_docs" not in st.session_state:
@@ -19,68 +18,44 @@ if "loaded_docs" not in st.session_state:
 if "retrieval_chain" not in st.session_state:
     st.session_state.retrieval_chain = None
 
-# PDF file uploader
+# PDF Directory Upload
 uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
 
+# Ensure that the uploaded files are stored in a directory
 if uploaded_files:
-    # Create a directory for storing uploaded PDFs
-    if not os.path.exists("uploaded_files"):
-        os.makedirs("uploaded_files")
+    uploaded_files_path = "uploaded_files"
+    if not os.path.exists(uploaded_files_path):
+        os.makedirs(uploaded_files_path)
 
+    # Save uploaded files
     for uploaded_file in uploaded_files:
-        # Save each file temporarily in the created directory
-        file_path = os.path.join("uploaded_files", uploaded_file.name)
+        file_path = os.path.join(uploaded_files_path, uploaded_file.name)
         with open(file_path, "wb") as f:
             f.write(uploaded_file.getbuffer())
-        st.success(f"File '{uploaded_file.name}' uploaded successfully!")
+        st.write(f"File '{uploaded_file.name}' uploaded successfully!")
 
-    # Load the PDFs using PyPDFDirectoryLoader
-    loader = PyPDFDirectoryLoader("uploaded_files")
+    # Load PDFs into Documents
+    loader = PyPDFDirectoryLoader(uploaded_files_path)
     docs = loader.load()
 
-    # Debugging: Print out the loaded docs to inspect their format
-    st.write("Loaded documents:")
-    st.write(docs)
-
-    # Ensure docs are in the correct format (list of Document objects)
-    if isinstance(docs, list):
-        if isinstance(docs[0], str):  # If it's plain text
-            docs = [Document(page_content=doc) for doc in docs]
-        elif isinstance(docs[0], dict):  # If it's a dict format
-            docs = [Document(page_content=doc["content"], metadata=doc.get("metadata", {})) for doc in docs]
-    else:
-        # If docs is not a list, wrap it manually
-        docs = [Document(page_content=docs)]
-
-    st.write(f"Documents wrapped into {len(docs)} Document objects.")
-
-    # Store loaded documents in session state
+    # Ensure that documents are stored correctly
     st.session_state.loaded_docs = docs
+    st.write(f"Loaded {len(st.session_state.loaded_docs)} documents.")
 
 # LLM and Embedding initialization
-llm = ChatGroq(groq_api_key="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", model_name='llama-3.1-70b-versatile', temperature=0.2, top_p=0.2)
+llm = ChatGroq(groq_api_key="your_groq_api_key", model_name="llama-3.1-70b-versatile", temperature=0.2, top_p=0.2)
 
 # Craft ChatPrompt Template
 prompt = ChatPromptTemplate.from_template(
-            """
-            You are a Life Insurance specialist who needs to answer queries based on the information provided in the uploaded documents only. Please follow all the information in the documents, and answer as per the same.
+    """
+    You are an expert who answers questions based on the provided documents. Please answer based on the documents.
 
-            Do not answer anything except from the document information. Please do not skip any information from the document.
+    <context>
+    {context}
+    </context>
 
-            Do not skip any information from the context. Answer appropriately as per the query asked.
-
-            Now, being an excellent Life Insurance agent, you need to compare your policies against the other company's policies in the documents, if asked.
-
-            Generate tabular data wherever required to classify the difference between different parameters of policies.
-
-            In the question when referred to as two companies, please understand that is for HDFC Life and Reliance Nippon.
-
-            <context>
-            {context}
-            </context>
-
-            Question: {input}"""
-        )
+    Question: {input}"""
+)
 
 # Text Splitting
 text_splitter = RecursiveCharacterTextSplitter(
@@ -89,32 +64,31 @@ text_splitter = RecursiveCharacterTextSplitter(
     length_function=len,
 )
 
-# Split documents into smaller chunks
+# Split documents into smaller chunks for better processing
 document_chunks = text_splitter.split_documents(st.session_state.loaded_docs)
-st.write(f"Number of chunks: {len(document_chunks)}")
 
 # Stuff Document Chain Creation
 document_chain = create_stuff_documents_chain(llm, prompt)
 
-# Save document chain to session state
+# Store document chain to session state
 st.session_state.retrieval_chain = document_chain
 
-# Query input from the user
+# Query input
 query = st.text_input("Enter your query:")
+
+# Process query and get answer
 if st.button("Get Answer"):
     if query:
-        # Directly pass the documents to the chain without using a retriever
+        # Prepare context by joining all the document contents
         context = "\n".join([doc.page_content for doc in st.session_state.loaded_docs])
+        
+        # Use retrieval_chain to get the response
         response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
-        # Check the structure of the response
-        st.write("Response:")
-        st.write(response)  # Print the entire response to inspect its format
-
-        # If the response is a dictionary with 'answer' key, use it
+        # Check if the response has an 'answer' key and display it
         if isinstance(response, dict) and 'answer' in response:
-            st.write(response['answer'])
+            st.write("Answer: ", response['answer'])
         else:
-            st.write("Here's your response!")
+            st.write("Could not retrieve answer.")
     else:
-        st.write("No documents loaded. Please upload and process the PDFs first.")
+        st.write("Please enter a query to get the answer.")
