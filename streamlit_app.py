@@ -41,7 +41,7 @@ if uploaded_files:
     # Ensure documents are loaded as Document objects and display their page content
     for doc in docs:
         st.write(f"Loaded document of type: {type(doc)}")  # Should show <class 'langchain.schema.Document'>
-        st.write(f"Document content snippet: {doc.page_content[:200]}...")  # Show the first 200 characters of the page content
+        #st.write(f"Document content snippet: {doc.page_content[:200]}...")  # Show the first 200 characters of the page content
 
     # Store loaded documents in session state
     st.session_state.loaded_docs = docs
