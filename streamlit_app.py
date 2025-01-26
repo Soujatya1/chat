@@ -22,17 +22,48 @@ loaded_docs = st.session_state.loaded_docs
 
 uploaded_files = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
 
-if st.button("Load and Process"):
-    if uploaded_files:
-        for uploaded_file in uploaded_files:
-        # Save each file temporarily in the created directory
-            file_path = os.path.join("uploaded_files", uploaded_file.name)
-            with open(file_path, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            loader = PyPDFDirectoryLoader("uploaded_files")
-            docs = loader.load()
+if st.button("Load and Process PDF"):
+    uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
-docs = docs
+    if uploaded_file is not None:
+        try:
+            # Read the uploaded PDF
+            pdf_reader = PyPDF2.PdfReader(uploaded_file)
+            total_pages = len(pdf_reader.pages)
+
+            all_text = []
+            
+            # Loop through the pages of the PDF and extract text
+            for page_num in range(total_pages):
+                page = pdf_reader.pages[page_num]
+                text = page.extract_text()
+
+                if text:
+                    all_text.append(text)
+
+            # Process the extracted text
+            st.write(f"Extracted {len(all_text)} pages of text from the PDF.")
+
+            # Creating document structure for each page of text
+            loaded_docs = []
+            for page_num, text in enumerate(all_text):
+                doc = {
+                    "metadata": {
+                        "source": uploaded_file.name,
+                        "page_number": page_num + 1,
+                    },
+                    "content": text,
+                }
+                loaded_docs.append(doc)
+
+            st.write(f"Loaded documents: {len(loaded_docs)}")
+
+            # Optional: Displaying content of the first document
+            st.write(f"Content of the first page: {loaded_docs[0]['content']}")
+
+        except Exception as e:
+            st.write(f"Error processing PDF: {e}")
+
 # LLM and Embedding initialization
 llm = ChatGroq(
     groq_api_key="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",
@@ -59,14 +90,14 @@ prompt = ChatPromptTemplate.from_template(
 )
 
 # Text Splitting
-if docs:
+if loaded_docs:
     text_splitter = RecursiveCharacterTextSplitter(
         chunk_size=500,
         chunk_overlap=100,
         length_function=len,
     )
 
-    document_chunks = text_splitter.split_documents(docs)
+    document_chunks = text_splitter.split_documents(loaded_docs)
     st.write(f"Number of chunks: {len(document_chunks)}")
 
     # Stuff Document Chain Creation
@@ -79,9 +110,9 @@ if docs:
 query = st.text_input("Enter your query:")
 if st.button("Get Answer"):
     if query:
-        if docs:
+        if loaded_docs:
             # Directly pass the documents to the chain without using a retriever
-            context = "\n".join([doc["page_content"] for doc in docs if isinstance(doc, dict)])
+            context = "\n".join([doc["page_content"] for doc in loaded_docs if isinstance(doc, dict)])
             response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
             # Check the structure of the response
