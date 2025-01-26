@@ -7,6 +7,8 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from PyPDFLoader import PyPDFLoader
+from io import BytesIO
 
 # Streamlit UI
 st.title("PDF Knowledge Repository")
@@ -17,27 +19,28 @@ if "loaded_docs" not in st.session_state:
 if "retrieval_chain" not in st.session_state:
     st.session_state.retrieval_chain = None
 
-uploaded_files = st.file_uploader(
-    "Upload PDF files", type=["pdf"], accept_multiple_files=True
-)
+loaded_docs = st.session_state.loaded_docs
 
-loaded_docs = []
+uploaded_files = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
 
 if st.button("Load and Process"):
     if uploaded_files:
         for uploaded_file in uploaded_files:
             try:
-                # Save the uploaded file content to a temporary file
-                with open(uploaded_file.name, "wb") as temp_file:
-                    temp_file.write(uploaded_file.read())
-                
-                # Load the file using PyPDFLoader
-                loader = PyPDFLoader(uploaded_file.name)
+                # Use a file-like object (BytesIO) for PyPDFLoader
+                pdf_file = BytesIO(uploaded_file.read())
+                loader = PyPDFLoader(pdf_file)
                 docs = loader.load()
 
-                # Add metadata to each document
-                for doc in docs:
-                    doc.metadata["source"] = uploaded_file.name
+                # Debugging: Check the structure of the loaded documents
+                if isinstance(docs, list):
+                    for doc in docs:
+                        if hasattr(doc, "page_content"):
+                            doc.metadata["source"] = uploaded_file.name
+                        else:
+                            st.write(f"Document does not have 'page_content': {doc}")
+                else:
+                    st.write("Loaded content is not a list of documents.")
 
                 loaded_docs.extend(docs)
             except Exception as e:
