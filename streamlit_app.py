@@ -42,8 +42,16 @@ if uploaded_files:
     # Wrap raw text documents into Document objects
     docs = []
     for raw_doc in raw_docs:
-        # Manually wrap each raw document into a Document object
-        doc = Document(page_content=raw_doc, metadata={})
+        # Ensure raw_doc is a string and handle any non-string content
+        page_content = raw_doc if isinstance(raw_doc, str) else str(raw_doc)
+        
+        # Check if page_content is a valid string
+        if not page_content.strip():  # If it's empty or whitespace, skip
+            st.write(f"Skipping empty content from document: {raw_doc}")
+            continue
+        
+        # Create Document object with valid content
+        doc = Document(page_content=page_content, metadata={})
         docs.append(doc)
 
         # Ensure documents are loaded as Document objects and display their content
