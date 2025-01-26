@@ -1,151 +1,111 @@
 import streamlit as st
-import pandas as pd
-import math
-from pathlib import Path
+from langchain.document_loaders import PyPDFLoader
+from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain.chains import RetrievalQA
+from langchain_groq import ChatGroq
+from langchain.embeddings import HuggingFaceEmbeddings
+from langchain_community.vectorstores import FAISS
+from langchain_core.prompts import ChatPromptTemplate
+from langchain.chains.combine_documents import create_stuff_documents_chain
 
-# Set the title and favicon that appear in the Browser's tab bar.
-st.set_page_config(
-    page_title='GDP dashboard',
-    page_icon=':earth_americas:', # This is an emoji shortcode. Could be a URL too.
+# Streamlit UI
+st.title("PDF Knowledge Repository")
+
+# Initialize session state variables
+if "loaded_docs" not in st.session_state:
+    st.session_state.loaded_docs = []
+if "retrieval_chain" not in st.session_state:
+    st.session_state.retrieval_chain = None
+
+uploaded_files = st.file_uploader(
+    "Upload PDF files", type=["pdf"], accept_multiple_files=True
 )
 
-# -----------------------------------------------------------------------------
-# Declare some useful functions.
+loaded_docs = []
 
-@st.cache_data
-def get_gdp_data():
-    """Grab GDP data from a CSV file.
+if st.button("Load and Process"):
+    if uploaded_files:
+        for uploaded_file in uploaded_files:
+            try:
+                loader = PyPDFLoader(uploaded_file)
+                docs = loader.load()
 
-    This uses caching to avoid having to read the file every time. If we were
-    reading from an HTTP endpoint instead of a file, it's a good idea to set
-    a maximum age to the cache with the TTL argument: @st.cache_data(ttl='1d')
+                for doc in docs:
+                    doc.metadata["source"] = uploaded_file.name
+
+                loaded_docs.extend(docs)
+            except Exception as e:
+                st.write(f"Error loading {uploaded_file.name}: {e}")
+    else:
+        st.write("Please upload at least one PDF file.")
+
+    st.write(f"Loaded documents: {len(loaded_docs)}")
+
+    # Store loaded documents in session state
+    st.session_state.loaded_docs = loaded_docs
+
+# LLM and Embedding initialization
+llm = ChatGroq(
+    groq_api_key="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",
+    model_name='llama-3.1-70b-versatile',
+    temperature=0.2,
+    top_p=0.2
+)
+
+# Craft ChatPrompt Template
+prompt = ChatPromptTemplate.from_template(
     """
+    You are a specialist who needs to answer queries based on the information provided in the uploaded documents only. 
 
-    # Instead of a CSV on disk, you could read from an HTTP endpoint here too.
-    DATA_FILENAME = Path(__file__).parent/'data/gdp_data.csv'
-    raw_gdp_df = pd.read_csv(DATA_FILENAME)
+    Do not answer anything except from the information in the documents. Please do not skip any information from the tabular data in the documents.
 
-    MIN_YEAR = 1960
-    MAX_YEAR = 2022
+    Do not skip any information from the context. Answer appropriately as per the query asked.
 
-    # The data above has columns like:
-    # - Country Name
-    # - Country Code
-    # - [Stuff I don't care about]
-    # - GDP for 1960
-    # - GDP for 1961
-    # - GDP for 1962
-    # - ...
-    # - GDP for 2022
-    #
-    # ...but I want this instead:
-    # - Country Name
-    # - Country Code
-    # - Year
-    # - GDP
-    #
-    # So let's pivot all those year-columns into two: Year and GDP
-    gdp_df = raw_gdp_df.melt(
-        ['Country Code'],
-        [str(x) for x in range(MIN_YEAR, MAX_YEAR + 1)],
-        'Year',
-        'GDP',
+    Generate tabular data wherever required to classify differences or summarize content effectively.
+
+    <context>
+    {context}
+    </context>
+
+    Question: {input}"""
+)
+
+# Text Splitting
+if st.session_state.loaded_docs:
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=100,
+        length_function=len,
     )
 
-    # Convert years from string to integers
-    gdp_df['Year'] = pd.to_numeric(gdp_df['Year'])
+    document_chunks = text_splitter.split_documents(st.session_state.loaded_docs)
+    st.write(f"Number of chunks: {len(document_chunks)}")
 
-    return gdp_df
+    # Stuff Document Chain Creation
+    document_chain = create_stuff_documents_chain(llm, prompt)
 
-gdp_df = get_gdp_data()
+    # Save document chain to session state
+    st.session_state.retrieval_chain = document_chain
 
-# -----------------------------------------------------------------------------
-# Draw the actual page
+# Query and Response
+query = st.text_input("Enter your query:")
+if st.button("Get Answer"):
+    if query:
+        if st.session_state.loaded_docs:
+            # Directly pass the documents to the chain without using a retriever
+            context = "\n".join([doc.page_content for doc in st.session_state.loaded_docs])
+            response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
-# Set the title that appears at the top of the page.
-'''
-# :earth_americas: GDP dashboard
+            # Check the structure of the response
+            st.write("Response:")
+            st.write(response)  # Print the entire response to inspect its format
 
-Browse GDP data from the [World Bank Open Data](https://data.worldbank.org/) website. As you'll
-notice, the data only goes to 2022 right now, and datapoints for certain years are often missing.
-But it's otherwise a great (and did I mention _free_?) source of data.
-'''
-
-# Add some spacing
-''
-''
-
-min_value = gdp_df['Year'].min()
-max_value = gdp_df['Year'].max()
-
-from_year, to_year = st.slider(
-    'Which years are you interested in?',
-    min_value=min_value,
-    max_value=max_value,
-    value=[min_value, max_value])
-
-countries = gdp_df['Country Code'].unique()
-
-if not len(countries):
-    st.warning("Select at least one country")
-
-selected_countries = st.multiselect(
-    'Which countries would you like to view?',
-    countries,
-    ['DEU', 'FRA', 'GBR', 'BRA', 'MEX', 'JPN'])
-
-''
-''
-''
-
-# Filter the data
-filtered_gdp_df = gdp_df[
-    (gdp_df['Country Code'].isin(selected_countries))
-    & (gdp_df['Year'] <= to_year)
-    & (from_year <= gdp_df['Year'])
-]
-
-st.header('GDP over time', divider='gray')
-
-''
-
-st.line_chart(
-    filtered_gdp_df,
-    x='Year',
-    y='GDP',
-    color='Country Code',
-)
-
-''
-''
-
-
-first_year = gdp_df[gdp_df['Year'] == from_year]
-last_year = gdp_df[gdp_df['Year'] == to_year]
-
-st.header(f'GDP in {to_year}', divider='gray')
-
-''
-
-cols = st.columns(4)
-
-for i, country in enumerate(selected_countries):
-    col = cols[i % len(cols)]
-
-    with col:
-        first_gdp = first_year[first_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-        last_gdp = last_year[last_year['Country Code'] == country]['GDP'].iat[0] / 1000000000
-
-        if math.isnan(first_gdp):
-            growth = 'n/a'
-            delta_color = 'off'
+            # If the response is a dictionary with 'answer' key, use it
+            if isinstance(response, dict) and 'answer' in response:
+                st.write(response['answer'])
+            else:
+                st.write("Here's your response!")
         else:
-            growth = f'{last_gdp / first_gdp:,.2f}x'
-            delta_color = 'normal'
-
-        st.metric(
-            label=f'{country} GDP',
-            value=f'{last_gdp:,.0f}B',
-            delta=growth,
-            delta_color=delta_color
-        )
+            st.write("No documents loaded. Please upload and process PDF files first.")
+    else:
+        st.write("Please enter a query.")
