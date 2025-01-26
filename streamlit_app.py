@@ -45,12 +45,16 @@ def retrieve_docs(query):
     return vector_store.similarity_search(query)
 
 def answer_question(question, documents):
-    # Only return the assistant's final response
+    # Prepare the context from documents
     context = "\n\n".join([doc.page_content for doc in documents])
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model
+    
+    # Get the response from the chain
     response = chain.invoke({"question": question, "context": context})
-    return response["answer"]
+    
+    # Extract and return the content of the AIMessage response
+    return response.content
 
 # Initialize conversation history in session state
 if "conversation_history" not in st.session_state:
