@@ -32,7 +32,7 @@ if st.button("Load and Process"):
             loader = PyPDFDirectoryLoader("uploaded_files")
             docs = loader.load()
 
-
+docs = docs
 # LLM and Embedding initialization
 llm = ChatGroq(
     groq_api_key="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",
