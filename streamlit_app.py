@@ -8,7 +8,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from io import BytesIO
-
+import PyPDF2
 # Streamlit UI
 st.title("PDF Knowledge Repository")
 
