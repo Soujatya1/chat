@@ -7,7 +7,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.schema import Document
+from langchain.schema import Document  # Import Document
 import os
 
 # Streamlit UI
@@ -35,18 +35,20 @@ if uploaded_files:
             f.write(uploaded_file.getbuffer())
         st.write(f"File '{uploaded_file.name}' uploaded successfully!")
 
-    # Load PDFs into Documents
+    # Load PDFs into raw strings
     loader = PyPDFDirectoryLoader(uploaded_files_path)
-    docs = loader.load()
+    raw_docs = loader.load()
 
-    # Ensure documents are loaded as Document objects and display their page content
-    for doc in docs:
-        if isinstance(doc, Document):
-            st.write(f"Loaded document of type: {type(doc)}")  # Should show <class 'langchain.schema.Document'>
-            # Displaying the first 200 characters of the content for preview
-            st.write(f"Document content snippet: {doc.page_content[:200]}...")  
-        else:
-            st.write(f"Warning: Loaded object is not a Document, it is of type {type(doc)}")
+    # Wrap raw text documents into Document objects
+    docs = []
+    for raw_doc in raw_docs:
+        # Manually wrap each raw document into a Document object
+        doc = Document(page_content=raw_doc, metadata={})
+        docs.append(doc)
+
+        # Ensure documents are loaded as Document objects and display their content
+        st.write(f"Loaded document of type: {type(doc)}")  # Should show <class 'langchain.schema.Document'>
+        st.write(f"Document content snippet: {doc.page_content[:200]}...")  # Show first 200 chars of page content
 
     # Store loaded documents in session state
     st.session_state.loaded_docs = docs
