@@ -22,12 +22,20 @@ loaded_docs = st.session_state.loaded_docs
 
 uploaded_file = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
 
+import PyPDF2
+import streamlit as st
+from io import BytesIO
+
+# File uploader outside the button logic
+uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
+
+# Define the button to trigger PDF processing after upload
 if st.button("Load and Process PDF"):
 
     if uploaded_file is not None:
         try:
-            # Ensure that uploaded_file is a file-like object
-            pdf_reader = PyPDF2.PdfReader(BytesIO(uploaded_file.read()))
+            # Read the uploaded file into a BytesIO stream and pass it to PyPDF2 PdfReader
+            pdf_reader = PyPDF2.PdfReader(uploaded_file)
             total_pages = len(pdf_reader.pages)
 
             all_text = []
@@ -64,6 +72,7 @@ if st.button("Load and Process PDF"):
             st.write(f"Error processing PDF: {e}")
     else:
         st.write("Please upload a PDF file before processing.")
+
 
 # LLM and Embedding initialization
 llm = ChatGroq(
