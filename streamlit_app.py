@@ -29,13 +29,21 @@ uploaded_files = st.file_uploader("Upload PDF files", type="pdf", accept_multipl
 
 # Process PDFs automatically when uploaded
 if uploaded_files:
+    # Save uploaded files to disk
+    for uploaded_file in uploaded_files:
+        file_path = os.path.join(uploaded_files_directory, uploaded_file.name)
+        with open(file_path, "wb") as f:
+            f.write(uploaded_file.getbuffer())  # Save the file to the directory
+        st.write(f"Saved {uploaded_file.name} to disk.")
+
+    # Now, load the PDFs from the saved directory
     loader = PyPDFDirectoryLoader(uploaded_files_directory)
     docs = loader.load()
-    
+
     # Debugging: Ensure that docs are loaded correctly
     st.write(f"Loaded {len(docs)} documents.")
     if len(docs) > 0:
-        st.write("Great")
+        st.write("Documents loaded successfully.")
     
     # Splitting the documents into chunks
     text_splitter = RecursiveCharacterTextSplitter(
