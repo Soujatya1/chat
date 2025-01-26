@@ -36,6 +36,12 @@ if uploaded_files:
     # Load the PDFs
     loader = PyPDFDirectoryLoader("uploaded_files")
     docs = loader.load()
+
+    # Ensure docs is a list of Document objects
+    if docs and isinstance(docs[0], dict):  # If it's a dictionary, convert to Document objects
+        from langchain.schema import Document
+        docs = [Document(page_content=doc["content"], metadata=doc.get("metadata", {})) for doc in docs]
+
     st.write(f"Loaded {len(docs)} documents.")
 
     # Store loaded documents in session state
@@ -47,11 +53,15 @@ llm = ChatGroq(groq_api_key="gsk_My7ynq4ATItKgEOJU7NyWGdyb3FYMohrSMJaKTnsUlGJ5HD
 # Craft ChatPrompt Template
 prompt = ChatPromptTemplate.from_template(
             """
-            You are a specialist who needs to answer queries based on the information provided in the uploaded documents only. Please follow all the information in the documents, and answer as per the same.
+            You are a Life Insurance specialist who needs to answer queries based on the information provided in the uploaded documents only. Please follow all the information in the documents, and answer as per the same.
 
             Do not answer anything except from the document information. Please do not skip any information from the document.
 
             Do not skip any information from the context. Answer appropriately as per the query asked.
+
+            Now, being an excellent Life Insurance agent, you need to compare your policies against the other company's policies in the documents, if asked.
+
+            Generate tabular data wherever required to classify the difference between different parameters of policies.
 
             In the question when referred to as two companies, please understand that is for HDFC Life and Reliance Nippon.
 
