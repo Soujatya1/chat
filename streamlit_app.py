@@ -38,12 +38,12 @@ if uploaded_files:
     loader = PyPDFDirectoryLoader(uploaded_files_path)
     docs = loader.load()
 
-    # Check and display the type of loaded documents
+    # Ensure documents are loaded as Document objects and display their page content
     for doc in docs:
-        st.write(f"Loaded document type: {type(doc)}")
-        st.write(f"Document content: {doc.page_content[:200]}...")  # Display the first 200 characters of page content
+        st.write(f"Loaded document of type: {type(doc)}")  # Should show <class 'langchain.schema.Document'>
+        st.write(f"Document content snippet: {doc.page_content[:200]}...")  # Show the first 200 characters of the page content
 
-    # Ensure that documents are stored correctly
+    # Store loaded documents in session state
     st.session_state.loaded_docs = docs
     st.write(f"Loaded {len(st.session_state.loaded_docs)} documents.")
 
