@@ -63,8 +63,7 @@ if st.button("Load and Process"):
 llm = ChatGroq(
     groq_api_key="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",
     model_name='llama-3.3-70b-versatile',
-    temperature=0.2,
-    top_p=0.2
+    temperature=0
 )
 
 # Craft ChatPrompt Template
