@@ -7,7 +7,6 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from PyPDFLoader import PyPDFLoader
 from io import BytesIO
 
 # Streamlit UI
