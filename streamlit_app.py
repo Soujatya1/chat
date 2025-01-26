@@ -7,7 +7,6 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
-from langchain.schema import Document  # Import Document
 import os
 
 # Streamlit UI
@@ -18,6 +17,10 @@ if "loaded_docs" not in st.session_state:
     st.session_state.loaded_docs = []
 if "retrieval_chain" not in st.session_state:
     st.session_state.retrieval_chain = None
+if "embeddings" not in st.session_state:
+    st.session_state.embeddings = None
+if "vectors" not in st.session_state:
+    st.session_state.vectors = None
 
 # PDF Directory Upload
 uploaded_files = st.file_uploader("Upload PDF files", type=["pdf"], accept_multiple_files=True)
@@ -35,63 +38,49 @@ if uploaded_files:
             f.write(uploaded_file.getbuffer())
         st.write(f"File '{uploaded_file.name}' uploaded successfully!")
 
-    # Load PDFs into raw strings
+    # Load PDFs into Documents
     loader = PyPDFDirectoryLoader(uploaded_files_path)
-    raw_docs = loader.load()
+    docs = loader.load()
 
-    # Wrap raw text documents into Document objects
-    docs = []
-    for raw_doc in raw_docs:
-        # Ensure raw_doc is a string and handle any non-string content
-        page_content = raw_doc if isinstance(raw_doc, str) else str(raw_doc)
-        
-        # Check if page_content is a valid string
-        if not page_content.strip():  # If it's empty or whitespace, skip
-            st.write(f"Skipping empty content from document: {raw_doc}")
-            continue
-        
-        # Create Document object with valid content
-        doc = Document(page_content=page_content, metadata={})
-        docs.append(doc)
-
-        # Ensure documents are loaded as Document objects and display their content
+    # Ensure documents are loaded as Document objects and display their page content
+    for doc in docs:
         st.write(f"Loaded document of type: {type(doc)}")  # Should show <class 'langchain.schema.Document'>
-        st.write(f"Document content snippet: {doc.page_content[:200]}...")  # Show first 200 chars of page content
 
     # Store loaded documents in session state
     st.session_state.loaded_docs = docs
     st.write(f"Loaded {len(st.session_state.loaded_docs)} documents.")
 
-# LLM and Embedding initialization
-llm = ChatGroq(groq_api_key="your_groq_api_key", model_name="llama-3.1-70b-versatile", temperature=0.2, top_p=0.2)
+    # Initialize Embeddings and Vector Store
+    if not st.session_state.embeddings:
+        st.session_state.embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
+        
+    # Split documents into chunks
+    text_splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=100)
+    document_chunks = text_splitter.split_documents(st.session_state.loaded_docs)
 
-# Craft ChatPrompt Template
-prompt = ChatPromptTemplate.from_template(
-    """
-    You are an expert who answers questions based on the provided documents. Please answer based on the documents.
+    # Create vector store using FAISS
+    st.session_state.vectors = FAISS.from_documents(document_chunks, st.session_state.embeddings)
 
-    <context>
-    {context}
-    </context>
+    # Initialize the LLM (ChatGroq)
+    llm = ChatGroq(groq_api_key="your_groq_api_key", model_name="llama-3.3-70b-versatile", temperature=0)
 
-    Question: {input}"""
-)
+    # Create ChatPrompt template for querying the documents
+    prompt = ChatPromptTemplate.from_template(
+        """
+        You are an expert who answers questions based on the provided documents. Please answer based on the documents.
 
-# Text Splitting
-text_splitter = RecursiveCharacterTextSplitter(
-    chunk_size=500,
-    chunk_overlap=100,
-    length_function=len,
-)
+        <context>
+        {context}
+        </context>
 
-# Split documents into smaller chunks for better processing
-document_chunks = text_splitter.split_documents(st.session_state.loaded_docs)
+        Question: {input}"""
+    )
 
-# Stuff Document Chain Creation
-document_chain = create_stuff_documents_chain(llm, prompt)
+    # Stuff Document Chain Creation
+    document_chain = create_stuff_documents_chain(llm, prompt)
 
-# Store document chain to session state
-st.session_state.retrieval_chain = document_chain
+    # Store document chain to session state
+    st.session_state.retrieval_chain = document_chain
 
 # Query input
 query = st.text_input("Enter your query:")
