@@ -30,7 +30,7 @@ if st.button("Load and Process"):
             with open(file_path, "wb") as f:
                 f.write(uploaded_file.getbuffer())
             loader = PyPDFDirectoryLoader("uploaded_files")
-            docs = st.session_state.loader.load()
+            docs = loader.load()
 
 
 # LLM and Embedding initialization
