@@ -20,10 +20,9 @@ if "retrieval_chain" not in st.session_state:
 
 loaded_docs = st.session_state.loaded_docs
 
-#uploaded_file = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
+uploaded_file = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
 
 if st.button("Load and Process PDF"):
-    uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
     if uploaded_file is not None:
         try:
@@ -63,6 +62,8 @@ if st.button("Load and Process PDF"):
 
         except Exception as e:
             st.write(f"Error processing PDF: {e}")
+    else:
+        st.write("Please upload a PDF file before processing.")
 
 # LLM and Embedding initialization
 llm = ChatGroq(
