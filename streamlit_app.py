@@ -7,6 +7,7 @@ from langchain.embeddings import HuggingFaceEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
+from langchain.schema import Document
 import os
 
 # Streamlit UI
@@ -40,8 +41,12 @@ if uploaded_files:
 
     # Ensure documents are loaded as Document objects and display their page content
     for doc in docs:
-        st.write(f"Loaded document of type: {type(doc)}")  # Should show <class 'langchain.schema.Document'>
-        #st.write(f"Document content snippet: {doc.page_content[:200]}...")  # Show the first 200 characters of the page content
+        if isinstance(doc, Document):
+            st.write(f"Loaded document of type: {type(doc)}")  # Should show <class 'langchain.schema.Document'>
+            # Displaying the first 200 characters of the content for preview
+            st.write(f"Document content snippet: {doc.page_content[:200]}...")  
+        else:
+            st.write(f"Warning: Loaded object is not a Document, it is of type {type(doc)}")
 
     # Store loaded documents in session state
     st.session_state.loaded_docs = docs
