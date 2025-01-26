@@ -26,14 +26,14 @@ if st.button("Load and Process"):
     if uploaded_files:
         for uploaded_file in uploaded_files:
         # Save each file temporarily in the created directory
-        file_path = os.path.join("uploaded_files", uploaded_file.name)
-        with open(file_path, "wb") as f:
-            f.write(uploaded_file.getbuffer())
-        loader = PyPDFDirectoryLoader("uploaded_files")
-        docs = st.session_state.loader.load()
+            file_path = os.path.join("uploaded_files", uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            loader = PyPDFDirectoryLoader("uploaded_files")
+            docs = st.session_state.loader.load()
 
     # Store loaded documents in session state
-    st.session_state.docs = docs
+        st.session_state.docs = docs
 
 # LLM and Embedding initialization
 llm = ChatGroq(
