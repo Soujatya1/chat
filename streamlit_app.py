@@ -27,9 +27,15 @@ if st.button("Load and Process"):
     if uploaded_files:
         for uploaded_file in uploaded_files:
             try:
-                loader = PyPDFLoader(uploaded_file)
+                # Save the uploaded file content to a temporary file
+                with open(uploaded_file.name, "wb") as temp_file:
+                    temp_file.write(uploaded_file.read())
+                
+                # Load the file using PyPDFLoader
+                loader = PyPDFLoader(uploaded_file.name)
                 docs = loader.load()
 
+                # Add metadata to each document
                 for doc in docs:
                     doc.metadata["source"] = uploaded_file.name
 
@@ -43,6 +49,7 @@ if st.button("Load and Process"):
 
     # Store loaded documents in session state
     st.session_state.loaded_docs = loaded_docs
+
 
 # LLM and Embedding initialization
 llm = ChatGroq(
