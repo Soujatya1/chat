@@ -22,13 +22,6 @@ loaded_docs = st.session_state.loaded_docs
 
 uploaded_file = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
 
-import PyPDF2
-import streamlit as st
-from io import BytesIO
-
-# File uploader outside the button logic
-uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
-
 # Define the button to trigger PDF processing after upload
 if st.button("Load and Process PDF"):
 
