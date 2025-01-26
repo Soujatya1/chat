@@ -1,5 +1,6 @@
+import os
 import streamlit as st
-from langchain.document_loaders import PyPDFLoader
+from langchain.document_loaders import PyPDFDirectoryLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
 from langchain_groq import ChatGroq
@@ -9,6 +10,7 @@ from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 from io import BytesIO
 import PyPDF2
+
 # Streamlit UI
 st.title("PDF Knowledge Repository")
 
@@ -18,101 +20,84 @@ if "loaded_docs" not in st.session_state:
 if "retrieval_chain" not in st.session_state:
     st.session_state.retrieval_chain = None
 
-loaded_docs = st.session_state.loaded_docs
+# Directory to store uploaded files
+uploaded_files_directory = "uploaded_files"
+if not os.path.exists(uploaded_files_directory):
+    os.makedirs(uploaded_files_directory)
 
-uploaded_file = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
+uploaded_files = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
 
-# Define the button to trigger PDF processing after upload
-if uploaded_file is not None:
-    try:
-        # Read the uploaded file content into memory as bytes
-        file_bytes = uploaded_file.read()
+# Process PDFs automatically when uploaded
+if uploaded_files:
+    for uploaded_file in uploaded_files:
+        try:
+            # Save each file temporarily in the created directory
+            file_path = os.path.join(uploaded_files_directory, uploaded_file.name)
+            with open(file_path, "wb") as f:
+                f.write(uploaded_file.getbuffer())
 
-        # Pass the bytes into BytesIO to create a file-like object
-        pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
-        total_pages = len(pdf_reader.pages)
+            st.success(f"File '{uploaded_file.name}' uploaded successfully!")
 
-        all_text = []
+        except Exception as e:
+            st.write(f"Error uploading '{uploaded_file.name}': {e}")
 
-        # Loop through the pages of the PDF and extract text
-        for page_num in range(total_pages):
-            page = pdf_reader.pages[page_num]
-            text = page.extract_text()
+    # Use PyPDFDirectoryLoader to load documents
+    loader = PyPDFDirectoryLoader(uploaded_files_directory)
+    docs = loader.load()
 
-            if text:
-                all_text.append(text)
+    st.write(f"Loaded {len(docs)} documents.")
 
-        # Process the extracted text
-        st.write(f"Extracted {len(all_text)} pages of text from the PDF.")
+    # Optional: Display content of the first document
+    #st.write(f"Content of the first document: {docs[0]['content']}")
 
-        # Creating document structure for each page of text
-        loaded_docs = []
-        for page_num, text in enumerate(all_text):
-            doc = {
-                "metadata": {
-                    "source": uploaded_file.name,
-                    "page_number": page_num + 1,
-                },
-                "content": text,
-            }
-            loaded_docs.append(doc)
+    # LLM and Embedding initialization
+    llm = ChatGroq(
+        groq_api_key="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",
+        model_name='llama-3.3-70b-versatile',
+        temperature=0
+    )
 
-        st.write(f"Loaded documents: {len(loaded_docs)}")
+    # Craft ChatPrompt Template
+    prompt = ChatPromptTemplate.from_template(
+        """
+        You are a specialist who needs to answer queries based on the information provided in the uploaded documents only. 
 
-        # Optional: Displaying content of the first document
-        st.write(f"Content of the first page: {loaded_docs[0]['content']}")
+        Do not answer anything except from the information in the documents. Please do not skip any information from the tabular data in the documents.
 
-        # LLM and Embedding initialization
-        llm = ChatGroq(
-            groq_api_key="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",
-            model_name='llama-3.3-70b-versatile',
-            temperature=0
-        )
+        Do not skip any information from the context. Answer appropriately as per the query asked.
 
-        # Craft ChatPrompt Template
-        prompt = ChatPromptTemplate.from_template(
-            """
-            You are a specialist who needs to answer queries based on the information provided in the uploaded documents only. 
+        Generate tabular data wherever required to classify differences or summarize content effectively.
 
-            Do not answer anything except from the information in the documents. Please do not skip any information from the tabular data in the documents.
+        <context>
+        {context}
+        </context>
 
-            Do not skip any information from the context. Answer appropriately as per the query asked.
+        Question: {input}"""
+    )
 
-            Generate tabular data wherever required to classify differences or summarize content effectively.
+    # Text Splitting
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=500,
+        chunk_overlap=100,
+        length_function=len,
+    )
 
-            <context>
-            {context}
-            </context>
+    document_chunks = text_splitter.split_documents(docs)
+    st.write(f"Number of chunks: {len(document_chunks)}")
 
-            Question: {input}"""
-        )
+    # Stuff Document Chain Creation
+    document_chain = create_stuff_documents_chain(llm, prompt)
 
-        # Text Splitting
-        text_splitter = RecursiveCharacterTextSplitter(
-            chunk_size=500,
-            chunk_overlap=100,
-            length_function=len,
-        )
-
-        document_chunks = text_splitter.split_documents(loaded_docs)
-        st.write(f"Number of chunks: {len(document_chunks)}")
-
-        # Stuff Document Chain Creation
-        document_chain = create_stuff_documents_chain(llm, prompt)
-
-        # Save document chain to session state
-        st.session_state.retrieval_chain = document_chain
-
-    except Exception as e:
-        st.write(f"Error processing PDF: {e}")
+    # Save document chain to session state
+    st.session_state.retrieval_chain = document_chain
 
 # Query and Response
 query = st.text_input("Enter your query:")
 if st.button("Get Answer"):
     if query:
-        if loaded_docs:
+        if uploaded_files:
             # Directly pass the documents to the chain without using a retriever
-            context = "\n".join([doc["page_content"] for doc in loaded_docs if isinstance(doc, dict)])
+            context = "\n".join([doc["content"] for doc in docs if isinstance(doc, dict)])
             response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
             # Check the structure of the response
