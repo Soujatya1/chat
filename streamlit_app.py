@@ -35,7 +35,7 @@ if uploaded_files:
     # Debugging: Ensure that docs are loaded correctly
     st.write(f"Loaded {len(docs)} documents.")
     if len(docs) > 0:
-        st.write(f"Content of the first document: {docs[0]['content']}")
+        #st.write(f"Content of the first document: {docs[0]['content']}")
     
     # Splitting the documents into chunks
     text_splitter = RecursiveCharacterTextSplitter(
