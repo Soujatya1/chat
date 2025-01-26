@@ -45,10 +45,12 @@ def retrieve_docs(query):
     return vector_store.similarity_search(query)
 
 def answer_question(question, documents):
+    # Only return the assistant's final response
     context = "\n\n".join([doc.page_content for doc in documents])
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model
-    return chain.invoke({"question": question, "context": context})
+    response = chain.invoke({"question": question, "context": context})
+    return response["answer"]
 
 # Initialize conversation history in session state
 if "conversation_history" not in st.session_state:
@@ -69,18 +71,15 @@ if uploaded_file:
     question = st.chat_input("Ask a question:")
 
     if question:
-        # Save user question to conversation history
-        st.session_state.conversation_history.append({"role": "user", "content": question})
-
+        # Retrieve relevant documents
         related_documents = retrieve_docs(question)
+        # Get the answer from the assistant
         answer = answer_question(question, related_documents)
 
-        # Save assistant response to conversation history
+        # Save only the assistant's response to conversation history
         st.session_state.conversation_history.append({"role": "assistant", "content": answer})
 
-    # Display the conversation history
+    # Display the assistant's responses only
     for message in st.session_state.conversation_history:
-        if message["role"] == "user":
-            st.chat_message("user").write(message["content"])
-        elif message["role"] == "assistant":
+        if message["role"] == "assistant":
             st.chat_message("assistant").write(message["content"])
