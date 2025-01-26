@@ -62,7 +62,7 @@ if uploaded_files:
     st.session_state.vectors = FAISS.from_documents(document_chunks, st.session_state.embeddings)
 
     # Initialize the LLM (ChatGroq)
-    llm = ChatGroq(groq_api_key="your_groq_api_key", model_name="llama-3.3-70b-versatile", temperature=0)
+    llm = ChatGroq(groq_api_key="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", model_name="llama-3.3-70b-versatile", temperature=0)
 
     # Create ChatPrompt template for querying the documents
     prompt = ChatPromptTemplate.from_template(
