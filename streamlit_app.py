@@ -27,14 +27,19 @@ if st.button("Load and Process PDF"):
 
     if uploaded_file is not None:
         try:
-            # Read the uploaded file content into a bytes stream (ensure it's being treated as a file)
-            file_bytes = uploaded_file.read()  # This is a bytes-like object
-            # Pass the bytes-like object into PyPDF2 via BytesIO to create a seekable stream
-            pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+            # Check the type of uploaded_file to ensure it's a file-like object
+            if isinstance(uploaded_file, BytesIO):
+                # If it's already a BytesIO object, we can directly process it
+                pdf_reader = PyPDF2.PdfReader(uploaded_file)
+            else:
+                # If it's not a BytesIO object, read the file into a BytesIO stream
+                file_bytes = uploaded_file.read()  # Read the file content
+                pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))  # Create a BytesIO stream
+            
             total_pages = len(pdf_reader.pages)
 
             all_text = []
-            
+
             # Loop through the pages of the PDF and extract text
             for page_num in range(total_pages):
                 page = pdf_reader.pages[page_num]
