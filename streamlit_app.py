@@ -85,7 +85,7 @@ query = st.text_input("Enter your query:")
 if st.button("Get Answer"):
     if query:
         # Prepare context by joining all the document contents
-        context = "\n".join([doc.page_content for doc in st.session_state.loaded_docs])
+        context = "\n".join([f"Document {i + 1}: {doc.metadata['source']}\n{doc.page_content}" for i, doc in enumerate(st.session_state.loaded_docs)])
 
         # Use retrieval_chain to get the response
         response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
