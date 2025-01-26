@@ -14,7 +14,7 @@ Context: {context}
 Answer:
 """
 
-pdfs_directory = 'chat-with-pdf/pdfs/'
+pdfs_directory = 'chat/pdfs/'
 
 embeddings = HuggingFaceEmbeddings(model_name="sentence-transformers/all-MiniLM-L6-v2")
 vector_store = InMemoryVectorStore(embeddings)
