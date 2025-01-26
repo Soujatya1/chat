@@ -8,6 +8,7 @@ from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.chains.combine_documents import create_stuff_documents_chain
 import os
+from langchain.schema import Document
 
 # Streamlit UI
 st.title("Document Intelligence")
@@ -33,22 +34,31 @@ if uploaded_files:
             f.write(uploaded_file.getbuffer())
         st.success(f"File '{uploaded_file.name}' uploaded successfully!")
 
-    # Load the PDFs
+    # Load the PDFs using PyPDFDirectoryLoader
     loader = PyPDFDirectoryLoader("uploaded_files")
     docs = loader.load()
 
-    # Ensure docs is a list of Document objects
-    if docs and isinstance(docs[0], dict):  # If it's a dictionary, convert to Document objects
-        from langchain.schema import Document
-        docs = [Document(page_content=doc["content"], metadata=doc.get("metadata", {})) for doc in docs]
+    # Debugging: Print out the loaded docs to inspect their format
+    st.write("Loaded documents:")
+    st.write(docs)
 
-    st.write(f"Loaded {len(docs)} documents.")
+    # Ensure docs are in the correct format (list of Document objects)
+    if isinstance(docs, list):
+        if isinstance(docs[0], str):  # If it's plain text
+            docs = [Document(page_content=doc) for doc in docs]
+        elif isinstance(docs[0], dict):  # If it's a dict format
+            docs = [Document(page_content=doc["content"], metadata=doc.get("metadata", {})) for doc in docs]
+    else:
+        # If docs is not a list, wrap it manually
+        docs = [Document(page_content=docs)]
+
+    st.write(f"Documents wrapped into {len(docs)} Document objects.")
 
     # Store loaded documents in session state
     st.session_state.loaded_docs = docs
 
 # LLM and Embedding initialization
-llm = ChatGroq(groq_api_key="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", model_name='llama-3.3-70b-versatile', temperature=0.2, top_p=0.2)
+llm = ChatGroq(groq_api_key="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", model_name='llama-3.1-70b-versatile', temperature=0.2, top_p=0.2)
 
 # Craft ChatPrompt Template
 prompt = ChatPromptTemplate.from_template(
