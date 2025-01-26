@@ -20,14 +20,15 @@ if "retrieval_chain" not in st.session_state:
 
 loaded_docs = st.session_state.loaded_docs
 
-uploaded_file = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
+#uploaded_file = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
 
 if st.button("Load and Process PDF"):
+    uploaded_file = st.file_uploader("Choose a PDF file", type="pdf")
 
     if uploaded_file is not None:
         try:
-            # Read the uploaded PDF
-            pdf_reader = PyPDF2.PdfReader(uploaded_file)
+            # Ensure that uploaded_file is a file-like object
+            pdf_reader = PyPDF2.PdfReader(BytesIO(uploaded_file.read()))
             total_pages = len(pdf_reader.pages)
 
             all_text = []
