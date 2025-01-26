@@ -92,12 +92,10 @@ if st.button("Get Answer"):
         retriever = st.session_state.vectors.as_retriever(search_type="similarity", k=2)  # Retrieve top 2 relevant documents
         docs = retriever.get_relevant_documents(query)  # Perform similarity search with the query
         
-        # If relevant documents are retrieved, prepare the context
+        # If relevant documents are retrieved, proceed with retrieval chain
         if docs:
-            context = "\n".join([f"Document {i + 1}: Source: {doc.metadata.get('source', 'Unknown')}\n{doc.metadata.get('title', 'No Title')}\n{doc.page_content}" for i, doc in enumerate(docs)])
-
-            # Use retrieval_chain to get the response
-            response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
+            # Directly pass the relevant documents to the retrieval_chain
+            response = st.session_state.retrieval_chain.invoke({"input": query, "documents": docs})
 
             # Check if the response has an 'answer' key and display it
             if isinstance(response, dict) and 'answer' in response:
