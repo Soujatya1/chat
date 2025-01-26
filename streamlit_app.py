@@ -27,7 +27,10 @@ if st.button("Load and Process PDF"):
 
     if uploaded_file is not None:
         try:
-            # Read the uploaded file into a BytesIO stream and pass it to PyPDF2 PdfReader
+            # Make sure to reset the position of the file pointer for PyPDF2 to process the file correctly
+            uploaded_file.seek(0)  # This ensures we start reading from the beginning of the file
+            
+            # Read the uploaded file using PyPDF2
             pdf_reader = PyPDF2.PdfReader(uploaded_file)
             total_pages = len(pdf_reader.pages)
 
