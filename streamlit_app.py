@@ -27,28 +27,21 @@ if st.button("Load and Process"):
         for uploaded_file in uploaded_files:
             try:
                 # Use a file-like object (BytesIO) for PyPDFLoader
-                pdf_file = BytesIO(uploaded_file.read())
-                loader = PyPDFLoader(pdf_file)
+                pdf_file = BytesIO(uploaded_file.read())  # Convert to BytesIO
+                loader = PyPDFLoader(pdf_file)  # Pass as file-like object
                 docs = loader.load()
 
                 # Debugging: Check the structure of the loaded documents
                 if isinstance(docs, list):
                     for doc in docs:
-                        if isinstance(doc, str):
-                            st.write(f"Loaded document is a string: {doc[:200]}")  # Show a snippet of the text
-                        elif hasattr(doc, "page_content"):
+                        if hasattr(doc, "page_content"):
                             doc.metadata["source"] = uploaded_file.name
                         else:
-                            st.write(f"Document has no 'page_content': {doc}")
+                            st.write(f"Document does not have 'page_content': {doc}")
                 else:
                     st.write("Loaded content is not a list of documents.")
-                
-                # If documents are strings, wrap them in structured objects (add page_content)
-                for doc in docs:
-                    if isinstance(doc, str):
-                        # Create a mock document structure with page_content
-                        doc = {"page_content": doc}
-                    loaded_docs.append(doc)
+
+                loaded_docs.extend(docs)
             except Exception as e:
                 st.write(f"Error loading {uploaded_file.name}: {e}")
     else:
