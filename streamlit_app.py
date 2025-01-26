@@ -95,7 +95,7 @@ if st.button("Get Answer"):
         # If relevant documents are retrieved, proceed with retrieval chain
         if docs:
             # Directly pass the relevant documents to the retrieval_chain
-            response = st.session_state.retrieval_chain.invoke({"input": query, "documents": docs})
+            response = st.session_state.retrieval_chain.invoke({"input": query, "context": docs})
 
             # Check if the response has an 'answer' key and display it
             if isinstance(response, dict) and 'answer' in response:
