@@ -97,8 +97,8 @@ if st.button("Get Answer"):
     if query:
         if uploaded_files:
             # Directly pass the documents to the chain without using a retriever
-            #context = "\n".join([doc["content"] for doc in docs if isinstance(doc, dict)])
-            response = st.session_state.retrieval_chain.invoke({"input": query})
+            context = "\n".join([doc["content"] for doc in docs if isinstance(doc, dict)])
+            response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
             # Check the structure of the response
             st.write("Response:")
