@@ -28,7 +28,6 @@ def upload_pdf(file):
 def load_pdf(file_path):
     loader = PDFPlumberLoader(file_path)
     documents = loader.load()
-
     return documents
 
 def split_text(documents):
@@ -37,7 +36,6 @@ def split_text(documents):
         chunk_overlap=200,
         add_start_index=True
     )
-
     return text_splitter.split_documents(documents)
 
 def index_docs(documents):
@@ -50,8 +48,11 @@ def answer_question(question, documents):
     context = "\n\n".join([doc.page_content for doc in documents])
     prompt = ChatPromptTemplate.from_template(template)
     chain = prompt | model
-
     return chain.invoke({"question": question, "context": context})
+
+# Initialize conversation history in session state
+if "conversation_history" not in st.session_state:
+    st.session_state.conversation_history = []
 
 uploaded_file = st.file_uploader(
     "Upload PDF",
@@ -65,10 +66,21 @@ if uploaded_file:
     chunked_documents = split_text(documents)
     index_docs(chunked_documents)
 
-    question = st.chat_input()
+    question = st.chat_input("Ask a question:")
 
     if question:
-        st.chat_message("user").write(question)
+        # Save user question to conversation history
+        st.session_state.conversation_history.append({"role": "user", "content": question})
+
         related_documents = retrieve_docs(question)
         answer = answer_question(question, related_documents)
-        st.chat_message("assistant").write(answer)
+
+        # Save assistant response to conversation history
+        st.session_state.conversation_history.append({"role": "assistant", "content": answer})
+
+    # Display the conversation history
+    for message in st.session_state.conversation_history:
+        if message["role"] == "user":
+            st.chat_message("user").write(message["content"])
+        elif message["role"] == "assistant":
+            st.chat_message("assistant").write(message["content"])
