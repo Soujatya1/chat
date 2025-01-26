@@ -27,48 +27,43 @@ if st.button("Load and Process PDF"):
 
     if uploaded_file is not None:
         try:
-            # Ensure that we are reading the uploaded file correctly
-            if hasattr(uploaded_file, 'read'):
-                # Read the file content into memory as bytes
-                file_bytes = uploaded_file.read()
-                
-                # Pass the bytes into BytesIO to create a file-like object
-                pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
-                total_pages = len(pdf_reader.pages)
+            # Read the uploaded file content into memory as bytes
+            file_bytes = uploaded_file.read()
 
-                all_text = []
+            # Pass the bytes into BytesIO to create a file-like object
+            pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+            total_pages = len(pdf_reader.pages)
 
-                # Loop through the pages of the PDF and extract text
-                for page_num in range(total_pages):
-                    page = pdf_reader.pages[page_num]
-                    text = page.extract_text()
+            all_text = []
 
-                    if text:
-                        all_text.append(text)
+            # Loop through the pages of the PDF and extract text
+            for page_num in range(total_pages):
+                page = pdf_reader.pages[page_num]
+                text = page.extract_text()
 
-                # Process the extracted text
-                st.write(f"Extracted {len(all_text)} pages of text from the PDF.")
+                if text:
+                    all_text.append(text)
 
-                # Creating document structure for each page of text
-                loaded_docs = []
-                for page_num, text in enumerate(all_text):
-                    doc = {
-                        "metadata": {
-                            "source": uploaded_file.name,
-                            "page_number": page_num + 1,
-                        },
-                        "content": text,
-                    }
-                    loaded_docs.append(doc)
+            # Process the extracted text
+            st.write(f"Extracted {len(all_text)} pages of text from the PDF.")
 
-                st.write(f"Loaded documents: {len(loaded_docs)}")
+            # Creating document structure for each page of text
+            loaded_docs = []
+            for page_num, text in enumerate(all_text):
+                doc = {
+                    "metadata": {
+                        "source": uploaded_file.name,
+                        "page_number": page_num + 1,
+                    },
+                    "content": text,
+                }
+                loaded_docs.append(doc)
 
-                # Optional: Displaying content of the first document
-                st.write(f"Content of the first page: {loaded_docs[0]['content']}")
+            st.write(f"Loaded documents: {len(loaded_docs)}")
 
-            else:
-                st.write("Uploaded file is not a valid file-like object.")
-            
+            # Optional: Displaying content of the first document
+            st.write(f"Content of the first page: {loaded_docs[0]['content']}")
+
         except Exception as e:
             st.write(f"Error processing PDF: {e}")
     else:
