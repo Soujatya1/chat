@@ -38,6 +38,11 @@ if uploaded_files:
     loader = PyPDFDirectoryLoader(uploaded_files_path)
     docs = loader.load()
 
+    # Check and display the type of loaded documents
+    for doc in docs:
+        st.write(f"Loaded document type: {type(doc)}")
+        st.write(f"Document content: {doc.page_content[:200]}...")  # Display the first 200 characters of page content
+
     # Ensure that documents are stored correctly
     st.session_state.loaded_docs = docs
     st.write(f"Loaded {len(st.session_state.loaded_docs)} documents.")
@@ -80,8 +85,8 @@ query = st.text_input("Enter your query:")
 if st.button("Get Answer"):
     if query:
         # Prepare context by joining all the document contents
-        context = "\n".join([doc.page_content for doc in st.session_state.loaded_docs])
-        
+        context = "\n".join([doc.page_content for doc in st.session_state.loaded_docs if hasattr(doc, 'page_content')])
+
         # Use retrieval_chain to get the response
         response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
