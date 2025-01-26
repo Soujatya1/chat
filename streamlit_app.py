@@ -75,15 +75,21 @@ if uploaded_file:
     question = st.chat_input("Ask a question:")
 
     if question:
+        # Save the user's question to the conversation history
+        st.session_state.conversation_history.append({"role": "user", "content": question})
+        
         # Retrieve relevant documents
         related_documents = retrieve_docs(question)
+        
         # Get the answer from the assistant
         answer = answer_question(question, related_documents)
-
-        # Save only the assistant's response to conversation history
+        
+        # Save the assistant's response to the conversation history
         st.session_state.conversation_history.append({"role": "assistant", "content": answer})
 
-    # Display the assistant's responses only
+    # Display the conversation history (user's question followed by the assistant's answer)
     for message in st.session_state.conversation_history:
-        if message["role"] == "assistant":
+        if message["role"] == "user":
+            st.chat_message("user").write(message["content"])
+        elif message["role"] == "assistant":
             st.chat_message("assistant").write(message["content"])
