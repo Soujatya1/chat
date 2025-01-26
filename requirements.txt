@@ -11,3 +11,4 @@ requests
 lxml
 aiohttp
 asyncio
+PyPDF2
