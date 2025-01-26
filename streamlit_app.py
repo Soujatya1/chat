@@ -34,14 +34,21 @@ if st.button("Load and Process"):
                 # Debugging: Check the structure of the loaded documents
                 if isinstance(docs, list):
                     for doc in docs:
-                        if hasattr(doc, "page_content"):
+                        if isinstance(doc, str):
+                            st.write(f"Loaded document is a string: {doc[:200]}")  # Show a snippet of the text
+                        elif hasattr(doc, "page_content"):
                             doc.metadata["source"] = uploaded_file.name
                         else:
-                            st.write(f"Document does not have 'page_content': {doc}")
+                            st.write(f"Document has no 'page_content': {doc}")
                 else:
                     st.write("Loaded content is not a list of documents.")
-
-                loaded_docs.extend(docs)
+                
+                # If documents are strings, wrap them in structured objects (add page_content)
+                for doc in docs:
+                    if isinstance(doc, str):
+                        # Create a mock document structure with page_content
+                        doc = {"page_content": doc}
+                    loaded_docs.append(doc)
             except Exception as e:
                 st.write(f"Error loading {uploaded_file.name}: {e}")
     else:
@@ -51,7 +58,6 @@ if st.button("Load and Process"):
 
     # Store loaded documents in session state
     st.session_state.loaded_docs = loaded_docs
-
 
 # LLM and Embedding initialization
 llm = ChatGroq(
@@ -102,7 +108,7 @@ if st.button("Get Answer"):
     if query:
         if st.session_state.loaded_docs:
             # Directly pass the documents to the chain without using a retriever
-            context = "\n".join([doc.page_content for doc in st.session_state.loaded_docs])
+            context = "\n".join([doc["page_content"] for doc in st.session_state.loaded_docs if isinstance(doc, dict)])
             response = st.session_state.retrieval_chain.invoke({"input": query, "context": context})
 
             # Check the structure of the response
