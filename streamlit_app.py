@@ -23,93 +23,88 @@ loaded_docs = st.session_state.loaded_docs
 uploaded_file = st.file_uploader("Upload PDF files", type="pdf", accept_multiple_files=True)
 
 # Define the button to trigger PDF processing after upload
-if st.button("Load and Process PDF"):
+if uploaded_file is not None:
+    try:
+        # Read the uploaded file content into memory as bytes
+        file_bytes = uploaded_file.read()
 
-    if uploaded_file is not None:
-        try:
-            # Read the uploaded file content into memory as bytes
-            file_bytes = uploaded_file.read()
+        # Pass the bytes into BytesIO to create a file-like object
+        pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+        total_pages = len(pdf_reader.pages)
 
-            # Pass the bytes into BytesIO to create a file-like object
-            pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
-            total_pages = len(pdf_reader.pages)
+        all_text = []
 
-            all_text = []
+        # Loop through the pages of the PDF and extract text
+        for page_num in range(total_pages):
+            page = pdf_reader.pages[page_num]
+            text = page.extract_text()
 
-            # Loop through the pages of the PDF and extract text
-            for page_num in range(total_pages):
-                page = pdf_reader.pages[page_num]
-                text = page.extract_text()
+            if text:
+                all_text.append(text)
 
-                if text:
-                    all_text.append(text)
+        # Process the extracted text
+        st.write(f"Extracted {len(all_text)} pages of text from the PDF.")
 
-            # Process the extracted text
-            st.write(f"Extracted {len(all_text)} pages of text from the PDF.")
+        # Creating document structure for each page of text
+        loaded_docs = []
+        for page_num, text in enumerate(all_text):
+            doc = {
+                "metadata": {
+                    "source": uploaded_file.name,
+                    "page_number": page_num + 1,
+                },
+                "content": text,
+            }
+            loaded_docs.append(doc)
 
-            # Creating document structure for each page of text
-            loaded_docs = []
-            for page_num, text in enumerate(all_text):
-                doc = {
-                    "metadata": {
-                        "source": uploaded_file.name,
-                        "page_number": page_num + 1,
-                    },
-                    "content": text,
-                }
-                loaded_docs.append(doc)
+        st.write(f"Loaded documents: {len(loaded_docs)}")
 
-            st.write(f"Loaded documents: {len(loaded_docs)}")
+        # Optional: Displaying content of the first document
+        st.write(f"Content of the first page: {loaded_docs[0]['content']}")
 
-            # Optional: Displaying content of the first document
-            st.write(f"Content of the first page: {loaded_docs[0]['content']}")
+        # LLM and Embedding initialization
+        llm = ChatGroq(
+            groq_api_key="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",
+            model_name='llama-3.3-70b-versatile',
+            temperature=0
+        )
 
-        except Exception as e:
-            st.write(f"Error processing PDF: {e}")
-    else:
-        st.write("Please upload a PDF file before processing.")
+        # Craft ChatPrompt Template
+        prompt = ChatPromptTemplate.from_template(
+            """
+            You are a specialist who needs to answer queries based on the information provided in the uploaded documents only. 
 
-# LLM and Embedding initialization
-llm = ChatGroq(
-    groq_api_key="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",
-    model_name='llama-3.3-70b-versatile',
-    temperature=0
-)
+            Do not answer anything except from the information in the documents. Please do not skip any information from the tabular data in the documents.
 
-# Craft ChatPrompt Template
-prompt = ChatPromptTemplate.from_template(
-    """
-    You are a specialist who needs to answer queries based on the information provided in the uploaded documents only. 
+            Do not skip any information from the context. Answer appropriately as per the query asked.
 
-    Do not answer anything except from the information in the documents. Please do not skip any information from the tabular data in the documents.
+            Generate tabular data wherever required to classify differences or summarize content effectively.
 
-    Do not skip any information from the context. Answer appropriately as per the query asked.
+            <context>
+            {context}
+            </context>
 
-    Generate tabular data wherever required to classify differences or summarize content effectively.
+            Question: {input}"""
+        )
 
-    <context>
-    {context}
-    </context>
+        # Text Splitting
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=500,
+            chunk_overlap=100,
+            length_function=len,
+        )
 
-    Question: {input}"""
-)
+        document_chunks = text_splitter.split_documents(loaded_docs)
+        st.write(f"Number of chunks: {len(document_chunks)}")
 
-# Text Splitting
-if loaded_docs:
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=500,
-        chunk_overlap=100,
-        length_function=len,
-    )
+        # Stuff Document Chain Creation
+        document_chain = create_stuff_documents_chain(llm, prompt)
 
-    document_chunks = text_splitter.split_documents(loaded_docs)
-    st.write(f"Number of chunks: {len(document_chunks)}")
+        # Save document chain to session state
+        st.session_state.retrieval_chain = document_chain
 
-    # Stuff Document Chain Creation
-    document_chain = create_stuff_documents_chain(llm, prompt)
-
-    # Save document chain to session state
-    st.session_state.retrieval_chain = document_chain
+    except Exception as e:
+        st.write(f"Error processing PDF: {e}")
 
 # Query and Response
 query = st.text_input("Enter your query:")
