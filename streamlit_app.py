@@ -24,7 +24,7 @@ uploaded_files = st.file_uploader("Upload PDF files", type="pdf", accept_multipl
 
 if st.button("Load and Process"):
     if uploaded_files:
-    for uploaded_file in uploaded_files:
+        for uploaded_file in uploaded_files:
         # Save each file temporarily in the created directory
         file_path = os.path.join("uploaded_files", uploaded_file.name)
         with open(file_path, "wb") as f:
