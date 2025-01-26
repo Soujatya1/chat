@@ -27,47 +27,48 @@ if st.button("Load and Process PDF"):
 
     if uploaded_file is not None:
         try:
-            # Check the type of uploaded_file to ensure it's a file-like object
-            if isinstance(uploaded_file, BytesIO):
-                # If it's already a BytesIO object, we can directly process it
-                pdf_reader = PyPDF2.PdfReader(uploaded_file)
+            # Ensure that we are reading the uploaded file correctly
+            if hasattr(uploaded_file, 'read'):
+                # Read the file content into memory as bytes
+                file_bytes = uploaded_file.read()
+                
+                # Pass the bytes into BytesIO to create a file-like object
+                pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))
+                total_pages = len(pdf_reader.pages)
+
+                all_text = []
+
+                # Loop through the pages of the PDF and extract text
+                for page_num in range(total_pages):
+                    page = pdf_reader.pages[page_num]
+                    text = page.extract_text()
+
+                    if text:
+                        all_text.append(text)
+
+                # Process the extracted text
+                st.write(f"Extracted {len(all_text)} pages of text from the PDF.")
+
+                # Creating document structure for each page of text
+                loaded_docs = []
+                for page_num, text in enumerate(all_text):
+                    doc = {
+                        "metadata": {
+                            "source": uploaded_file.name,
+                            "page_number": page_num + 1,
+                        },
+                        "content": text,
+                    }
+                    loaded_docs.append(doc)
+
+                st.write(f"Loaded documents: {len(loaded_docs)}")
+
+                # Optional: Displaying content of the first document
+                st.write(f"Content of the first page: {loaded_docs[0]['content']}")
+
             else:
-                # If it's not a BytesIO object, read the file into a BytesIO stream
-                file_bytes = uploaded_file.read()  # Read the file content
-                pdf_reader = PyPDF2.PdfReader(BytesIO(file_bytes))  # Create a BytesIO stream
+                st.write("Uploaded file is not a valid file-like object.")
             
-            total_pages = len(pdf_reader.pages)
-
-            all_text = []
-
-            # Loop through the pages of the PDF and extract text
-            for page_num in range(total_pages):
-                page = pdf_reader.pages[page_num]
-                text = page.extract_text()
-
-                if text:
-                    all_text.append(text)
-
-            # Process the extracted text
-            st.write(f"Extracted {len(all_text)} pages of text from the PDF.")
-
-            # Creating document structure for each page of text
-            loaded_docs = []
-            for page_num, text in enumerate(all_text):
-                doc = {
-                    "metadata": {
-                        "source": uploaded_file.name,
-                        "page_number": page_num + 1,
-                    },
-                    "content": text,
-                }
-                loaded_docs.append(doc)
-
-            st.write(f"Loaded documents: {len(loaded_docs)}")
-
-            # Optional: Displaying content of the first document
-            st.write(f"Content of the first page: {loaded_docs[0]['content']}")
-
         except Exception as e:
             st.write(f"Error processing PDF: {e}")
     else:
