@@ -25,7 +25,7 @@ vector_store = InMemoryVectorStore(embeddings)
 model = ChatGroq(groq_api_key="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", model_name="llama-3.3-70b-versatile", temperature=0)
 
 def upload_pdf(file):
-    with open(pdfs_directory, "wb") as f:
+    with open(pdfs_directory + file.name, "wb") as f:
         f.write(file.getbuffer())
 
 def load_pdf(file_path):
@@ -66,12 +66,12 @@ if "conversation_history" not in st.session_state:
 uploaded_file = st.file_uploader(
     "Upload PDF",
     type="pdf",
-    accept_multiple_files=True
+    accept_multiple_files=False
 )
 
 if uploaded_file:
     upload_pdf(uploaded_file)
-    documents = load_pdf(pdfs_directory)
+    documents = load_pdf(pdfs_directory + file.name)
     chunked_documents = split_text(documents)
     index_docs(chunked_documents)
 
