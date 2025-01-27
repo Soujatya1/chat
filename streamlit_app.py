@@ -66,7 +66,7 @@ if "conversation_history" not in st.session_state:
 uploaded_file = st.file_uploader(
     "Upload PDF",
     type="pdf",
-    accept_multiple_files=False
+    accept_multiple_files=True
 )
 
 if uploaded_file:
