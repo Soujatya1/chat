@@ -71,7 +71,7 @@ uploaded_file = st.file_uploader(
 
 if uploaded_file:
     upload_pdf(uploaded_file)
-    documents = load_pdf(pdfs_directory + uploaded_file.name)
+    documents = load_pdf(pdfs_directory)
     chunked_documents = split_text(documents)
     index_docs(chunked_documents)
 
