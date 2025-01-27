@@ -7,6 +7,9 @@ from langchain_groq import ChatGroq
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.embeddings import HuggingFaceEmbeddings
 
+st.title("Document GeN-ie")
+st.subheader("Chat with your documents")
+
 template = """
 You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. As per the question asked, please mention the accurate and precise related information. Use point-wise format, if required .
 Question: {question} 
