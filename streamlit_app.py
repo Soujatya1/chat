@@ -25,7 +25,7 @@ vector_store = InMemoryVectorStore(embeddings)
 model = ChatGroq(groq_api_key="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", model_name="llama-3.3-70b-versatile", temperature=0)
 
 def upload_pdf(file):
-    with open(pdfs_directory + file.name, "wb") as f:
+    with open(pdfs_directory, "wb") as f:
         f.write(file.getbuffer())
 
 def load_pdf(file_path):
