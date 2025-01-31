@@ -72,16 +72,21 @@ uploaded_file = st.file_uploader(
     accept_multiple_files=True
 )
 
-if uploaded_file:
-    upload_pdf(uploaded_file)
-    documents = load_pdf(pdfs_directory + uploaded_file.name)
-    chunked_documents = split_text(documents)
-    index_docs(chunked_documents)
+if uploaded_files:
+    all_documents = []
+
+    for uploaded_file in uploaded_files:
+        file_path = upload_pdf(uploaded_file)
+        documents = load_pdf(file_path)
+        chunked_documents = split_text(documents)
+        all_documents.extend(chunked_documents)  # Collect all documents
+
+    # Index all documents after processing
+    index_docs(all_documents)
 
     question = st.chat_input("Ask a question:")
 
     if question:
-        # Save the user's question to the conversation history
         st.session_state.conversation_history.append({"role": "user", "content": question})
         
         # Retrieve relevant documents
@@ -93,7 +98,7 @@ if uploaded_file:
         # Save the assistant's response to the conversation history
         st.session_state.conversation_history.append({"role": "assistant", "content": answer})
 
-    # Display the conversation history (user's question followed by the assistant's answer)
+    # Display the conversation history
     for message in st.session_state.conversation_history:
         if message["role"] == "user":
             st.chat_message("user").write(message["content"])
