@@ -72,7 +72,7 @@ uploaded_file = st.file_uploader(
     accept_multiple_files=True
 )
 
-if uploaded_files:
+if uploaded_file:
     all_documents = []
 
     for uploaded_file in uploaded_files:
