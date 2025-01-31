@@ -12,6 +12,7 @@ st.subheader("Chat with your documents")
 
 template = """
 You are an assistant for question-answering tasks. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know. As per the question asked, please mention the accurate and precise related information. Use point-wise format, if required .
+Also answer situation-based questions derived from the context as per the question.
 Question: {question} 
 Context: {context} 
 Answer:
@@ -66,7 +67,7 @@ if "conversation_history" not in st.session_state:
 uploaded_file = st.file_uploader(
     "Upload PDF",
     type="pdf",
-    accept_multiple_files=False
+    accept_multiple_files=True
 )
 
 if uploaded_file:
