@@ -75,7 +75,7 @@ uploaded_file = st.file_uploader(
 if uploaded_file:
     all_documents = []
 
-    for uploaded_file in uploaded_files:
+    for uploaded_file in uploaded_file:
         file_path = upload_pdf(uploaded_file)
         documents = load_pdf(file_path)
         chunked_documents = split_text(documents)
